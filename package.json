@@ -1,0 +1,22 @@
+{
+  "name": "gx-ctrls-crud-sequelize",
+  "version": "1.0.0",
+  "description": "Controller class with CRUD features for Sequelize.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Eugene Demchenko <demchenkoev@gmail.com>",
+  "license": "ISC",
+  "keywords": [
+    "controllers",
+    "crud",
+    "validation",
+    "sequelize",
+    "promises",
+    "ES6"
+  ],
+  "dependencies": {
+    "gx-ctrls": "^1.0.0"
+  }
+}
