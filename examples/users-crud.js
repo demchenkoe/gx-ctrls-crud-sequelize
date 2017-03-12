@@ -44,7 +44,7 @@ ctrl.callAction('list', {  })
     (results) => { console.log('results', results) },
     (error) => { console.log('error', error) }
   );
-    /*
+
 
  ctrl.callAction('get', { id: 1 })
  .then(
@@ -52,16 +52,16 @@ ctrl.callAction('list', {  })
    (error) => { console.log('error', error) }
  );
 
- ctrl.callAction('update', { id: 1, role: "WEBAPP_ADMIN" })
+ ctrl.callAction('update', { id: 2, role: "WEBAPP_ADMIN" })
  .then(
    (results) => { console.log('results', results) },
    (error) => { console.log('error', error) }
  );
 
-  */
-  /*
+
+
 ctrl.callAction('get', { id: 1 })
   .then(
     (results) => { console.log('results', results) },
     (error) => { console.log('error', error) }
-  );      */
+  );

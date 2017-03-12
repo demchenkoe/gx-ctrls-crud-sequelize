@@ -5,13 +5,13 @@
  */
 'use strict';
 
-var gxCtrls = require('gx-ctrls');
+let ctrls = require('gx-ctrls');
 
-gxCtrls.validate.validators.number = function (value, options, key, attributes) {
+ctrls.validate.validators.number = function (value, options, key, attributes) {
   if (typeof value === 'undefined') {
     return;
   }
-  if (!gxCtrls.validate.isNumber(value)) {
+  if (!ctrls.validate.isNumber(value)) {
     return 'must be a number';
   }
   if (options.hasOwnProperty('min') && value < options.min) {
@@ -22,15 +22,15 @@ gxCtrls.validate.validators.number = function (value, options, key, attributes) 
   }
 };
 
-gxCtrls.validate.validators.sequelize = function (value, options, key, attributes) {
+ctrls.validate.validators.sequelize = function (value, options, key, attributes) {
   return options.message(value, options, key, attributes);
 };
 
-function getConstraintsForModel(model, action) {
-  var attrs = model.tableAttributes;
-  //var defaults = model._defaultValues;
-  var fields = Object.keys(attrs);
-  var result = {};
+function getConstraintsForModel(Model, action) {
+  let attrs = Model.tableAttributes;
+  //let defaults = Model._defaultValues;
+  let fields = Object.keys(attrs);
+  let result = {};
   fields.forEach((field) => {
     let validators = {};
     let attrOpt = attrs[field];
@@ -61,11 +61,12 @@ function getConstraintsForModel(model, action) {
   return result;
 }
 
-class SequelizeListAction extends gxCtrls.Action {
+class SequelizeListAction extends ctrls.Action {
 
   get paramsConstraints() {
     return {
       where: {},
+      include: {},
       order: {},
       offset: {
         number: {min: 0}
@@ -76,50 +77,50 @@ class SequelizeListAction extends gxCtrls.Action {
     }
   }
 
-  _run() {
-    var model = this.options.ctrl.model;
-    var findOptions = {
+  process() {
+    let Model = this.options.ctrl.Model;
+    let findOptions = {
       where: this.params.where || {},
-      order: this.params.order || model.primaryKeyField,
+      order: this.params.order || Model.primaryKeyField,
       offset: this.params.offset || 0,
       limit: this.params.limit || 50,
       raw: !this.options.disableRawOption
     };
-    return model.findAndCountAll(findOptions);
+    return Model.findAndCountAll(findOptions);
   }
 }
 
-class SequelizeGetAction extends gxCtrls.Action {
+class SequelizeGetAction extends ctrls.Action {
 
   get paramsConstraints() {
-    var model = this.options.ctrl.model;
-    var constraints = {};
-    constraints[model.primaryKeyField] = {presence: true};
+    let Model = this.options.ctrl.Model;
+    let constraints = {};
+    constraints[Model.primaryKeyField] = {presence: true};
     return constraints;
   }
 
-  _run() {
-    var model = this.options.ctrl.model;
-    var findOptions = {
+  process() {
+    let Model = this.options.ctrl.Model;
+    let findOptions = {
       where: {},
       raw: !this.options.disableRawOption
     };
-    findOptions.where[model.primaryKeyField] = this.params[model.primaryKeyField];
-    return model.findOne(findOptions);
+    findOptions.where[Model.primaryKeyField] = this.params[Model.primaryKeyField];
+    return Model.findOne(findOptions);
   }
 }
 
-class SequelizeCreateAction extends gxCtrls.Action {
+class SequelizeCreateAction extends ctrls.Action {
 
   get paramsConstraints() {
-    var model = this.options.ctrl.model;
-    var constraints = getConstraintsForModel(model, 'create');
+    let Model = this.options.ctrl.Model;
+    let constraints = getConstraintsForModel(Model, 'create');
     return constraints;
   }
 
-  _run() {
-    var model = this.options.ctrl.model;
-    return model.create(this.params, {raw: !this.options.disableRawOption})
+  process() {
+    let Model = this.options.ctrl.Model;
+    return Model.create(this.params, {raw: !this.options.disableRawOption})
       .then((row) => {
         //sequelize fix raw option
         if (!this.options.disableRawOption) {
@@ -130,65 +131,72 @@ class SequelizeCreateAction extends gxCtrls.Action {
   }
 }
 
-class SequelizeUpdateAction extends gxCtrls.Action {
+class SequelizeUpdateAction extends ctrls.Action {
 
   get paramsConstraints() {
-    var model = this.options.ctrl.model;
-    var constraints = getConstraintsForModel(model, 'update');
-    constraints[model.primaryKeyField].presence = true;
+    let Model = this.options.ctrl.Model;
+    let constraints = getConstraintsForModel(Model, 'update');
+    constraints[Model.primaryKeyField].presence = true;
     return constraints;
   }
 
-  _run() {
-    var model = this.options.ctrl.model;
-    var updateOptions = {
-      where: {}
+  process() {
+    let Model = this.options.ctrl.Model;
+    let updateOptions = {
+      where: {},
     };
-    updateOptions.where[model.primaryKeyField] = this.params[model.primaryKeyField];
-    var values = Object.assign({}, this.params);
-    delete values[model.primaryKeyField];
-    return model.update(values, updateOptions);
+    updateOptions.where[Model.primaryKeyField] = this.params[Model.primaryKeyField];
+    let values = Object.assign({}, this.params);
+    delete values[Model.primaryKeyField];
+    return Model.findOne(updateOptions).then((row) => {
+      if(row === null) {
+        return ctrls.defaultOptions.errorFormater('OBJECT_NOT_FOUND', `${Model.name} not found.`, {where: updateOptions.where})
+      }
+      return row.update(values).then(() => {
+        return row.reload().then(() => {
+          if(!this.options.disableRawOption) {
+            return row.toJSON();
+          }
+          return row;
+        });
+      });
+    });
   }
 }
 
-class SequelizeDeleteAction extends gxCtrls.Action {
+class SequelizeDeleteAction extends ctrls.Action {
 
   get paramsConstraints() {
-    var model = this.options.ctrl.model;
-    var constraints = {};
-    constraints[model.primaryKeyField] = {presence: true};
+    let Model = this.options.ctrl.Model;
+    let constraints = {};
+    constraints[Model.primaryKeyField] = {presence: true};
     return constraints;
   }
 
-  _run() {
-    var model = this.options.ctrl.model;
-    var destroyOptions = {
+  process() {
+    let Model = this.options.ctrl.Model;
+    let destroyOptions = {
       where: {}
     };
-    destroyOptions.where[model.primaryKeyField] = this.params[model.primaryKeyField];
-    return model.destroy(destroyOptions);
+    destroyOptions.where[Model.primaryKeyField] = this.params[Model.primaryKeyField];
+    return Model.destroy(destroyOptions);
   }
 }
 
-class SequelizeCRUDController extends gxCtrls.Contoller {
+class SequelizeCRUDController extends ctrls.Contoller {
 
-  constructor(model, context, options) {
+  constructor(Model, context, options) {
     super(context, options);
-    this.model = model;
-  }
-
-  get actions() {
-    return {
-      'list': SequelizeListAction,
-      'get': SequelizeGetAction,
-      'create': SequelizeCreateAction,
-      'update': SequelizeUpdateAction,
-      'delete': SequelizeDeleteAction
-    }
+    this.Model = Model;
+    this.addAction('list', SequelizeListAction);
+    this.addAction('get', SequelizeGetAction);
+    this.addAction('create', SequelizeCreateAction);
+    this.addAction('update', SequelizeUpdateAction);
+    this.addAction('delete', SequelizeDeleteAction);
   }
 }
 
-module.exports.gxCtrls = gxCtrls;
+module.exports.ctrls = ctrls;
 module.exports.getConstraintsForModel = getConstraintsForModel;
 module.exports.SequelizeListAction = SequelizeListAction;
 module.exports.SequelizeGetAction = SequelizeGetAction;
