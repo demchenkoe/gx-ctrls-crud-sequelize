@@ -13,55 +13,79 @@
 
 var SequelizeCRUDController = require("../index").SequelizeCRUDController;
 var Sequelize = require("sequelize");
-var sequelize = new Sequelize('postgres://postgres@192.168.10.101:5442/medical-office');
+var sequelize = new Sequelize('postgres://postgres@localhost:5442/test');
+var context = {user: {role: 'ADMIN'}};
 
-var modelUser = sequelize.define('temp', {
-  displayName: Sequelize.DataTypes.STRING,
-  email:  Sequelize.DataTypes.STRING,
+var modelUser = sequelize.define('user', {
+  displayName: {type: Sequelize.DataTypes.STRING, comment: "I'm a comment!"},
+  email: Sequelize.DataTypes.TEXT,
   photo: Sequelize.DataTypes.STRING,
-  role: Sequelize.DataTypes.ENUM('WEBAPP_ADMIN', 'CONSUMER')
+  role: Sequelize.DataTypes.ENUM('ADMIN', 'USER'),
 }, {
   paranoid: true,
   underscoredAll: true,
   indexes: [
-    { unique: true, fields: ['email'] }
-  ]
+    {unique: true, fields: ['email']}
+  ],
+  defaultScope: {},
+  scopes: {
+    showDeleted: {
+      paranoid: false
+    }
+  }
 });
 
-//sequelize.sync()
+var modelGroup = sequelize.define('group', {
+  displayName: {type: Sequelize.DataTypes.STRING, comment: "I'm a comment!"},
+}, {
+  paranoid: true,
+  underscoredAll: true
+});
 
-var ctrl = new SequelizeCRUDController(modelUser);
+modelUser.belongsToMany(modelGroup, {through: 'user_group'});
+modelGroup.belongsToMany(modelUser, {through: 'user_group'});
 
- ctrl.callAction('create', { displayName: 'John Doe', photo: 'https://s-media-cache-ak0.pinimg.com/736x/f2/fb/2f/f2fb2fcc3c9b2ada37cf02af881511b1.jpg' })
- .then(
-   (results) => { console.log('results', results) },
-   (error) => { console.log('error', error) }
- );
+sequelize.sync({ force: false }).then(() => {
+
+  function outputResult(result) {
+    console.log('result.data', result.data);
+  }
+
+  function outputError(result) {
+    console.log('result.error', JSON.stringify(result.error));
+  }
+
+  let ctrlOptions = {
+    rules: [
+      {roles: ['ADMIN'], restrictedFields: ["deletedAt"], scope: 'showDeleted'}
+    ]
+  };
+
+  var ctrl = new SequelizeCRUDController(modelUser, ctrlOptions);
+  var params = {
+    displayName: 'John Doe'
+  };
+
+  ctrl
+    .execute(context, 'create', params)
+    .then(outputResult, outputError);
+
+  ctrl
+    .execute(context, 'list')
+    .then(outputResult, outputError);
 
 
-ctrl.callAction('list', {  })
-  .then(
-    (results) => { console.log('results', results) },
-    (error) => { console.log('error', error) }
-  );
+  ctrl
+    .execute(context, 'get', {id: 1})
+    .then(outputResult, outputError);
+   
+  ctrl
+    .execute(context, 'update', {id: 1, role: "ADMIN"})
+    .then(outputResult, outputError);
 
 
- ctrl.callAction('get', { id: 1 })
- .then(
-   (results) => { console.log('results', results) },
-   (error) => { console.log('error', error) }
- );
+  ctrl
+    .execute(context, 'delete', {id: 1})
+    .then(outputResult, outputError);
 
- ctrl.callAction('update', { id: 2, role: "WEBAPP_ADMIN" })
- .then(
-   (results) => { console.log('results', results) },
-   (error) => { console.log('error', error) }
- );
-
-
-
-ctrl.callAction('get', { id: 1 })
-  .then(
-    (results) => { console.log('results', results) },
-    (error) => { console.log('error', error) }
-  );
+});

@@ -8,25 +8,81 @@
 
 #### Exmaple 
 
-		var SequelizeCRUDController = require('gx-ctrls-crud-sequelize').SequelizeCRUDController;
-		var usersCtrls = new SequelizeCRUDController(sequelizeModelUser)
+Define model
 		
-		//create
+		var Sequelize = require("sequelize");
+		var sequelize = new Sequelize('postgres://postgres@localhost:5442/test');		
 		
-		usersCtrls.callMethod('create', { name: 'John', email: 'john@example.com' })
-    		.then((user) => { console.log('new user', user); })
-    		
-		//update
-    		
-		usersCtrls.callMethod('update', { name: 'John Doe' })
-				.then((updatedCount) => { console.log('updated count', updatedCount); })    		
+		var modelUser = sequelize.define('user', {
+			displayName: {type: Sequelize.DataTypes.STRING, comment: "I'm a comment!"},
+			email: Sequelize.DataTypes.TEXT,
+			photo: Sequelize.DataTypes.STRING,
+			role: Sequelize.DataTypes.ENUM('ADMIN', 'USER')
+		}, {
+			paranoid: true,
+			underscoredAll: true,
+			indexes: [
+				{unique: true, fields: ['email']}
+			],			
+			scopes: {
+				showDeleted: {
+					paranoid: false
+				}
+			}
+		});
 		
-		//get
-		
-		usersCtrls.callMethod('get', { id: 1 })
-				.then((user) => { console.log('user', user); })
+Define helpers for output results		
+
 				
-		//list
-    		
-		usersCtrls.callMethod('list', { offset: 0, limit: 10 })
-				.then((result) => { console.log('found %s records, users:', result.count, result.rows); })				
+		function outputResult(result) {
+			console.log('result.data', result.data);
+    }
+    
+    function outputError(result) {
+			console.log('result.error', JSON.stringify(result.error));
+    }
+
+      
+Define controller for sequelize model      
+      
+      var SequelizeCRUDController = require("gx-ctrls-crud-sequelize").SequelizeCRUDController;
+      
+Define rule for role ADMIN. This rule apply scope to model at execute action and hide field "deletedAt" from results.       
+    
+      let ctrlOptions = {
+        rules: [
+          {roles: ['ADMIN'], restrictedFields: ["deletedAt"], scope: 'showDeleted'}
+        ]
+      };
+    
+      var ctrl = new SequelizeCRUDController(modelUser, ctrlOptions);
+
+How to use controller:      
+      
+      var context = {user: {role: 'ADMIN'}};
+      
+      var params = {
+        displayName: 'John Doe'
+      };
+    
+      ctrl
+        .execute(context, 'create', params)
+        .then(outputResult, outputError);
+    
+      ctrl
+        .execute(context, 'list')
+        .then(outputResult, outputError);
+    
+    
+      ctrl
+        .execute(context, 'get', {id: 1})
+        .then(outputResult, outputError);
+       
+      ctrl
+        .execute(context, 'update', {id: 1, role: "ADMIN"})
+        .then(outputResult, outputError);
+    
+    
+      ctrl
+        .execute(context, 'delete', {id: 1})
+        .then(outputResult, outputError);				

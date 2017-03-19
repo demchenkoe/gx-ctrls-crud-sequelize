@@ -1,6 +1,6 @@
 {
   "name": "gx-ctrls-crud-sequelize",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "description": "Controller class with CRUD features for Sequelize.",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,6 @@
     "ES6"
   ],
   "dependencies": {
-    "gx-ctrls": "^1.0.0"
+    "gx-ctrls": "^1.0.8"
   }
 }
